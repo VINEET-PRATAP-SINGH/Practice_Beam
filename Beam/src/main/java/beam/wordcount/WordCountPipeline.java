@@ -22,7 +22,7 @@ public class WordCountPipeline {
 		
 		
 		//read text file
-		PCollection<String> lines=pipeline.apply("Read from file",TextIO.read().from("D:\\beam\\test.csv"));
+		PCollection<String> lines=pipeline.apply("Read from file",TextIO.read().from("D:\\beam\\test.txt"));
 		//words split
 		PCollection wordsPerLines =lines.apply(MapElements.via(new SimpleFunction<String, List<String>>(){
 		@Override
