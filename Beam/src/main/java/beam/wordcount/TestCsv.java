@@ -16,7 +16,12 @@ import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.SimpleFunction;
+import org.apache.beam.sdk.transforms.DoFn.ProcessContext;
+import org.apache.beam.sdk.transforms.DoFn.ProcessElement;
+import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
@@ -34,19 +39,17 @@ public class TestCsv {
 
 	   
 	}
-	static class CsvParser extends DoFn <ReadableFile, CSVRecord>{
+	static class CsvParser extends DoFn <ReadableFile,KV<String,Integer>>{
 		@DoFn.ProcessElement
-		public void processElement(@Element ReadableFile element, DoFn.OutputReceiver<CSVRecord> receiver) throws IOException {
+		public void processElement(@Element ReadableFile element, DoFn.OutputReceiver<KV<String,Integer>> receiver) throws IOException {
 		    
 		InputStream is = Channels.newInputStream(element.open());
 		 Reader reader = new InputStreamReader(is);
 		 Iterable<CSVRecord> records = CSVFormat.DEFAULT.withHeader("Month,Expense").withDelimiter(',').withFirstRecordAsHeader().parse(reader);
 		    
 		    for (CSVRecord record : records) { 
-		    	String s= record.get(1);
-		    	String x= record.get(0);
-		    	System.out.println(x+" "+s);
-		    	receiver.output(record);
+		    	
+		    	receiver.output(KV.of( record.get(0),Integer.parseInt(record.get(1))));
 	}}}
 	public static void main(String[] args) {
 		BatchOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(BatchOptions.class);
@@ -57,6 +60,24 @@ public class TestCsv {
 				.apply(FileIO.match().filepattern(options.getInput()))
 				.apply(FileIO.readMatches())
 				.apply(ParDo.of(new CsvParser()));
+		PCollection<KV<String, Integer>> yearlyExpense = (PCollection<KV<String, Integer>>) lines
+				.apply(ParDo.of(new DoFn<KV<String, Integer>, KV<String, Integer>>() {
+					@ProcessElement
+					public void processElement(ProcessContext p) {// to check which month has high expense than 300 and then store in pcollection
+						KV<String, Integer> value = p.element();
+						if (value.getValue() > 300) {
+							p.output(KV.of(value.getKey(), value.getValue()));
+						}
+
+					}
+				}));
+		yearlyExpense.apply(MapElements.via(new SimpleFunction<KV<String, Integer>,String>(){
+			@Override
+			public String apply(KV<String, Integer> input) {
+				return String.format("%s,%s",input.getKey(), input.getValue());
+			}
+		}))
+		.apply(TextIO.write().to("D:\\beam\\csv\\csv_output").withHeader("Month,Expense").withSuffix(".csv").withoutSharding());
 		pipeline.run().waitUntilFinish();
 
 	}
