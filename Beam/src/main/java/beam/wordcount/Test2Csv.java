@@ -34,8 +34,6 @@ public class Test2Csv {
 	public interface BatchOptions extends PipelineOptions {
 
 		@Description("Path to the data file(s) containing game data.")
-
-		@Default.String("D:\\beam\\test1.csv")
 		String getInput();
 
 		void setInput(String value);
