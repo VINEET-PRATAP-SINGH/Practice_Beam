@@ -29,13 +29,7 @@ public class MinIOUnzip {
 		      MinioClient minioClient =new MinioClient("https://play.min.io","Q3AM3UQ867SPQQA43P2F","zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG");
 		      minioClient.statObject("minio-001", "simulations_job0.tar.gz");
 		      InputStream stream = minioClient.getObject("minio-001", "simulations_job0.tar.gz");
-/*		      byte[] buf = new byte[16384];
-		      int bytesRead;
-		      while ((bytesRead = stream.read(buf, 0, buf.length)) >= 0) {
-		        System.out.println(new String(buf, 0, bytesRead, StandardCharsets.UTF_8));
-		      }
 
-*/
 		      GZIPInputStream gZIPInputStream = new GZIPInputStream(stream);
 		      TarArchiveInputStream tis = new TarArchiveInputStream(gZIPInputStream);
 
