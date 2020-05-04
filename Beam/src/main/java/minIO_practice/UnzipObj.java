@@ -8,8 +8,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Date;
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.Compression;
@@ -45,7 +47,11 @@ public class UnzipObj {
 	static AWSCredentials awsCredentials = new BasicAWSCredentials("cred1", "cred2");
 	
 	 public static class unzip extends DoFn<FileIO.ReadableFile, String> {
-		 
+		 String des;
+		 unzip(String des){
+			 this.des=des;
+			
+		 }
 		 @DoFn.ProcessElement
 		 public void processElement(@Element ReadableFile element, DoFn.OutputReceiver<String> receiver) throws IOException {
 			 AmazonS3 s3client = AmazonS3ClientBuilder
@@ -57,34 +63,6 @@ public class UnzipObj {
 			 try {
 			 InputStream is = Channels.newInputStream(element.open());
 			 TarArchiveInputStream tis = new TarArchiveInputStream(is);
-//			 File destFile = new File("s3://radiantlabs/sanfran-sfd0413c/results/simulations_untar/un_zip");
-/*			 File destFile = new File("C:\\Users\\vpst1\\Downloads\\Compressed\\unzip");
-	            
-	            if(!destFile.exists()){
-	                 destFile.mkdir();
-	                 System.out.println("directory made");
-	            }
-	            TarArchiveEntry tarEntry = null;
-             System.out.println("starting to unzip");
-	            while ((tarEntry = tis.getNextTarEntry()) != null) {
-	                File outputFile = new File(destFile + File.separator + tarEntry.getName());
-                System.out.println(" File ---- " + outputFile.getPath());
-	                if(tarEntry.isDirectory()){
-//	                	System.out.println("outputFile Directory ---- " 
-//	                            + outputFile.getAbsolutePath());
-	                    if(!outputFile.exists()){
-	                        outputFile.mkdirs();
-	                    }
-	                }else{
-                	  System.out.println("outputFile File ---- " + outputFile.getPath()+"\n--------"+outputFile.getParent());
-	                    outputFile.getParentFile().mkdirs();
-	                    FileOutputStream fos = new FileOutputStream(outputFile); 
-	                    IOUtils.copy(tis, fos);
-	                    fos.close();
-	                }   
-	            }
-	            tis.close();
- */
 			 TarArchiveEntry tarEntry = tis.getNextTarEntry();
 		        while (tarEntry != null) {
 		            byte[] btoRead = new byte[1024];
@@ -97,13 +75,16 @@ public class UnzipObj {
 		            String st=bout.toString();
 		            ByteArrayInputStream bais =new ByteArrayInputStream(st.getBytes("UTF-8"));
 		            Map<String, String> meta = new HashMap<String, String>();
-		            meta.put("date", "02-05-2020");
+		            Date date = new Date();  
+		            SimpleDateFormat formatter = new SimpleDateFormat("MM/dd/yyyy");  
+		            String strDate = formatter.format(date);  
+		            meta.put("date", strDate);
 		            ObjectMetadata medata = new ObjectMetadata(); 
 		            medata.setUserMetadata(meta);
 		            System.out.println("untar--"+tarEntry.getName());
-		       s3client.putObject("radiantlabs", "sanfran-sfd0413c/results/simulations_untar/un_zip/"+tarEntry.getName(),bais,medata);
-//		           minioClient.putObject("minio-001", "Unzip/"+tarEntry.getName(), bais, new PutObjectOptions(bais.available(), -1));
-		            bais.close();
+		            s3client.putObject("radiantlabs", des+tarEntry.getName(),bais,medata);
+		       		
+		       		bais.close();
 		            tarEntry = tis.getNextTarEntry();
 		        }
 		        System.out.println("done");
@@ -121,8 +102,10 @@ public class UnzipObj {
 	public interface CustomerOfflineDataOptions extends PipelineOptions {
 		@Default.String("s3://radiantlabs/sanfran-sfd0413c/results/simulation_output/simulations_job1001.tar.gz")
 		String getInputFile();
-
 		void setInputFile(String file);
+		String getOutputFile();
+		void setOutputFile(String des);
+		
 	}
 
 	public static void main(String[] args) {
@@ -136,7 +119,7 @@ public class UnzipObj {
 		
 		PCollection input = pipeline.apply("ReadInput", FileIO.match().filepattern(options.getInputFile()))
 				.apply(FileIO.readMatches().withCompression(Compression.GZIP));
-		input.apply(ParDo.of(new unzip()));
+		input.apply(ParDo.of(new unzip(options.getOutputFile())));
 
 		pipeline.run().waitUntilFinish();
 	}
