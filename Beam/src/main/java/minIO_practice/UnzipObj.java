@@ -69,10 +69,11 @@ public class UnzipObj {
 			 InputStream is = Channels.newInputStream(element.open());
 			 TarArchiveInputStream tis = new TarArchiveInputStream(is);
 			 TarArchiveEntry tarEntry = tis.getNextTarEntry();
-			 if(!exists(s3client,des+tarEntry.getName()))
-			 {
+			 
 				
 		        while (tarEntry != null) {
+		        	if(!exists(s3client,des+tarEntry.getName()))
+					 {
 		            byte[] btoRead = new byte[1024];
 		            ByteArrayOutputStream bout = new ByteArrayOutputStream();
 		            int len = 0;
@@ -93,8 +94,15 @@ public class UnzipObj {
 		            s3client.putObject("radiantlabs", des+tarEntry.getName(),bais,medata);
 		       		
 		       		bais.close();
+					 }
+		        	else {
+		        		for(int i=0;i<=4;i++)
+		        		{
+		        			tarEntry = tis.getNextTarEntry();
+		        		}
+		        	}
 		            tarEntry = tis.getNextTarEntry();
-		        }
+		        
 			 }
 		        System.out.println("done");
 		        tis.close();
@@ -110,6 +118,7 @@ public class UnzipObj {
 		
 		  static boolean exists(AmazonS3 s3,String path) {
 			    try {
+			    	System.out.println("exist ="+path);
 			        s3.getObjectMetadata("radiantlabs", path); 
 			    } catch(AmazonServiceException e) {
 			    	System.out.println("no key");
