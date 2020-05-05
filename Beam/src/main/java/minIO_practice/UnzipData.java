@@ -73,8 +73,8 @@ public class UnzipData {
 		                bout.write(btoRead, 0, len);
 		            }
 		            bout.close();
-		            String st=bout.toString();
-		            ByteArrayInputStream bais =new ByteArrayInputStream(st.getBytes("UTF-8"));
+		            byte[] b=bout.toByteArray(); 
+		            ByteArrayInputStream bais =new ByteArrayInputStream(b);
 		           
 		           
 		            System.out.println("untar--"+tarEntry.getName());
