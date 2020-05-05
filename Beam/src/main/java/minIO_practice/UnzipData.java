@@ -42,10 +42,16 @@ public class UnzipData {
  static	AmazonS3 s3client;
 	 public static class unzip extends DoFn<FileIO.ReadableFile, String> {
 		 String des;
+		 Map<String, String> meta = new HashMap<String, String>();
+		 ObjectMetadata medata = new ObjectMetadata();
 		 unzip(String des){
 			 this.des=des;
 			 
-			
+			 Date date = new Date();  
+	            SimpleDateFormat formatter = new SimpleDateFormat("MM/dd/yyyy");  
+	            String strDate = formatter.format(date);  
+	            meta.put("date", strDate);
+	            medata.setUserMetadata(meta);
 
 		 }
 		 @DoFn.ProcessElement
@@ -69,13 +75,8 @@ public class UnzipData {
 		            bout.close();
 		            String st=bout.toString();
 		            ByteArrayInputStream bais =new ByteArrayInputStream(st.getBytes("UTF-8"));
-		            Map<String, String> meta = new HashMap<String, String>();
-		            Date date = new Date();  
-		            SimpleDateFormat formatter = new SimpleDateFormat("MM/dd/yyyy");  
-		            String strDate = formatter.format(date);  
-		            meta.put("date", strDate);
-		            ObjectMetadata medata = new ObjectMetadata(); 
-		            medata.setUserMetadata(meta);
+		           
+		           
 		            System.out.println("untar--"+tarEntry.getName());
 		            s3client.putObject("radiantlabs", des+tarEntry.getName(),bais,medata);
 		       		
@@ -113,13 +114,13 @@ public class UnzipData {
 		
 		  static boolean exists(AmazonS3 s3,String path) {
 			    try {
-			    	System.out.println("exist ="+path);
+			    //	System.out.println("exist ="+path);
 			        s3.getObjectMetadata("radiantlabs", path); 
 			    } catch(AmazonServiceException e) {
-			    	System.out.println("no key");
+			    //	System.out.println("no key");
 			        return false;
 			    }
-			    System.out.println("key present");
+			  //  System.out.println("key present");
 			    return true;
 			}
 	 
